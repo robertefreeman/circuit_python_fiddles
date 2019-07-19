@@ -1,15 +1,25 @@
 import board
-import audioio
-import neopixel
 import time
 import busio
+from digitalio import DigitalInOut
 import terminalio
 from adafruit_display_text import label
+from adafruit_esp32spi import adafruit_esp32spi
+import adafruit_esp32spi.adafruit_esp32spi_requests as requests
 
+TEXT_URL = "https://www.google.com"
+
+# If you are using a board with pre-defined ESP32 Pins:
+esp32_cs = DigitalInOut(board.ESP_CS)
+esp32_ready = DigitalInOut(board.ESP_BUSY)
+esp32_reset = DigitalInOut(board.ESP_RESET)
+
+spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
+esp = adafruit_esp32spi.ESP_SPIcontrol(spi, esp32_cs, esp32_ready, esp32_reset)
 
 text_area = label.Label(
     terminalio.FONT,
-    text="",
+    text="PyPortal\nRocks",
     max_glyphs=50,  # Optionally allow longer text to be added
     color = 0x00FF00,
     x=20,  # Pixel offsets from (0, 0) the top left
@@ -17,26 +27,22 @@ text_area = label.Label(
     line_spacing=1,  # Distance between lines
 )
 
+def checksite(site):
+    r = requests.get(site)
+    r.close()
+    return str(r.status_code)
 
+requests.set_interface(esp)
 
-# Connect to the NeoPixel (there is only one so it is index 0)
-# auto_write means we don't have to call pixels.show() each time
-pixels = neopixel.NeoPixel(board.NEOPIXEL, 1, auto_write=True)
-
-def play_sound_file(file_path):
+while not esp.is_connected:
     try:
-        with open(file_path, "rb") as f:
-            wave = audioio.WaveFile(f)
-            audio.play(wave)
-            while audio.playing:
-                time.sleep(0.005)
-    except OSError as e:
-        print('Error opening file: %s' % e)
+        esp.connect_AP('RobRadio2', 'kreative')
+    except RuntimeError as e:
+        print("could not connect to AP, retrying: ",e)
+        continue
 
 while True:
-    pixels[0] = (0, 255, 0)  # Red, green, blue
-    time.sleep(1)
-    # with audioio.AudioOut(board.AUDIO_OUT) as audio:  # or board.A0
-    #    play_sound_file("super_cool.wav")
-    text_area.text = str('Site is up')
-    board.DISPLAY.show(text_area)
+    print('-'*40)
+    print("Status code: " + checksite("https://www.google.com"))
+    print('-'*40)
+    time.sleep(3)
