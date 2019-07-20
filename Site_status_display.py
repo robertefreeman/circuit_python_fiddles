@@ -36,7 +36,7 @@ requests.set_interface(esp)
 
 while not esp.is_connected:
     try:
-        esp.connect_AP('RobRadio2', 'kreative')
+        esp.connect_AP('SSID', 'password')
     except RuntimeError as e:
         print("could not connect to AP, retrying: ",e)
         continue
